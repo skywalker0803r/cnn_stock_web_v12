@@ -30,7 +30,7 @@ def create_result():
 			return predict
 	Ricky = Agent(model)
 	#製作features
-	df = web.DataReader(SID,'yahoo',start="2000-01-01")
+	df = web.DataReader(SID,'yahoo',start="2019-01-01")
 	df = df.iloc[:,:5]
 	ohlcv = df[['Open','High','Low','Close','Volume']]
 	ohlcv.columns = ['open','high','low','close','volume']
@@ -79,7 +79,7 @@ def create_result():
 	df['BUY'] = predict[:,1]
 	df['SELL'] = predict[:,2]
 	df = df.iloc[:,-3:]
-	df = df.join(web.DataReader(SID,'yahoo',start="2000-01-01")['Close'])
+	df = df.join(web.DataReader(SID,'yahoo',start="2019-01-01")['Close'])
 	df['SIGNAL'] = SIGNAL
 	#繪圖
 	t = df[-40:].copy()
