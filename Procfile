@@ -1,2 +1,2 @@
-web: gunicorn web-app-classifier:app --log-level debug 
+web: gunicorn cnn-stock-app:app --log-level debug 
 
