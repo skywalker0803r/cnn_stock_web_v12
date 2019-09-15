@@ -11,3 +11,4 @@ pandas == 0.25.1
 finta == 0.3.9
 scikit-learn == 0.21.3
 joblib == 0.13.2
+tensorflow == 1.13.1
