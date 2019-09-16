@@ -30,7 +30,7 @@ def create_result():
 			return predict
 	Ricky = Agent(model)
 	#製作features
-	df = web.DataReader(SID,'yahoo',start="2019-01-01")
+	df = web.DataReader(SID,'yahoo',start="2018-01-01")
 	df = df.iloc[:,:5]
 	ohlcv = df[['Open','High','Low','Close','Volume']]
 	ohlcv.columns = ['open','high','low','close','volume']
@@ -79,10 +79,11 @@ def create_result():
 	df['BUY'] = predict[:,1]
 	df['SELL'] = predict[:,2]
 	df = df.iloc[:,-3:]
-	df = df.join(web.DataReader(SID,'yahoo',start="2019-01-01")['Close'])
+	df = df.join(web.DataReader(SID,'yahoo',start="2018-01-01")['Close'])
 	df['SIGNAL'] = SIGNAL
 	#繪圖
 	t = df[-40:].copy()
+	print(t)
 	buy = t[t['SIGNAL']==1]['Close']
 	sell = t[t['SIGNAL']==2]['Close']
 	t['Close'].plot()
@@ -101,4 +102,4 @@ def render_page():
 	return render_template('cnn-stock-web.html')
 
 if __name__ == '__main__':
-	app.run(debug=False,port=os.getenv('PORT',5001))
+	app.run(debug=False,port=os.getenv('PORT',5003))
