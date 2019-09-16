@@ -1,11 +1,31 @@
 <html>
+
     <head>
         <meta charset="utf-8"/>
         <title>CNN Stock predict</title>
     </head>
-    <body>
+
+    <body>      
         <div class ="predict_result">
             <img src="{{ url_for('static', filename='predict_result.png') }}"/>
         </div>
+        <h8>近期買賣機率參考</h8>    
+        <table border="2">
+        	    
+        	    <tr>
+        	    	<td>DATE</td>
+        	    	<td>HOLD</td>
+        	    	<td>BUY</td>
+        	    	<td>SELL</td>
+        	    </tr>
+        	    {% for row in data %}
+        	    <tr>
+        	        <td>{{row[5]}}</td>
+        	 		<td>{{row[0]}}</td>
+        	 		<td>{{row[1]}}</td>
+        	 		<td>{{row[2]}}</td>
+        	    </tr>
+        	    {% endfor %}
+        </table> 
     </body>
 </html>

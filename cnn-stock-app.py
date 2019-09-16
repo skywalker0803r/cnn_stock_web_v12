@@ -74,12 +74,12 @@ def create_result():
 	predict = Ricky.choose_action(Xs)
 	SIGNAL = [ np.argmax(i) for i in predict]
 	#predict result
-	df = df.iloc[-len(predict):]
+	df = df.iloc[-len(SIGNAL):]
 	df['HOLD'] = predict[:,0]
 	df['BUY'] = predict[:,1]
 	df['SELL'] = predict[:,2]
 	df = df.iloc[:,-3:]
-	df = df.join(web.DataReader(SID,'yahoo',start="2018-01-01")['Close'])
+	df['Close'] = web.DataReader(SID,'yahoo',start="2018-01-01")['Close'][-len(SIGNAL):].values
 	df['SIGNAL'] = SIGNAL
 	#繪圖
 	t = df[-40:].copy()
@@ -90,6 +90,7 @@ def create_result():
 	plt.scatter(list(buy.index),list(buy.values),color='red',marker='^')
 	plt.scatter(list(sell.index),list(sell.values),color='black')
 	plt.savefig("./static/predict_result.png")
+	return t
 #=======================================================================
 
 app = Flask(__name__, static_url_path='/static')
@@ -97,9 +98,12 @@ app = Flask(__name__, static_url_path='/static')
 @app.route('/')
 def render_page():
 	K.clear_session()
-	create_result()
+	table = create_result()
 	K.clear_session()
-	return render_template('cnn-stock-web.html')
+	table['date'] = table.index
+	data = table.values
+	print(data.shape)
+	return render_template('cnn-stock-web.html',data=data)
 
 if __name__ == '__main__':
-	app.run(debug=False,port=os.getenv('PORT',5003))
+	app.run(debug=False,port=os.getenv('PORT',5015))
