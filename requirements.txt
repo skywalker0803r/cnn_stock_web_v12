@@ -11,6 +11,6 @@ pandas == 0.24.2
 finta == 0.3.9
 scikit-learn == 0.21.3
 joblib == 0.13.2
-tensorflow == 1.13.1
+tensorflow == 2.11.1
 matplotlib == 3.1.0
 pandas-datareader == 0.7.0
