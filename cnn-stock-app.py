@@ -12,6 +12,8 @@ import joblib
 import pandas as pd
 from keras import backend as K
 import yfinance as yf
+from datetime import datetime, timedelta
+import plotly.graph_objs as go
 
 # === 初始化 Flask App ===
 app = Flask(__name__, static_url_path='/static')
@@ -28,7 +30,8 @@ FEATURES = [
 
 # === 資料處理 ===
 def load_stock_data():
-    df = yf.download(SID,start='2018-01-01')
+    one_year_ago = (datetime.today() - timedelta(days=365)).strftime('%Y-%m-%d')
+    df = yf.download(SID, start=one_year_ago)
     ohlcv = df[['Open', 'High', 'Low', 'Close', 'Volume']]
     ohlcv.columns = ['open', 'high', 'low', 'close', 'volume']
     df['RSI'] = TA.RSI(ohlcv)
@@ -67,15 +70,54 @@ def predict_signals(Xs, close_prices):
 
 def plot_prediction(df):
     recent = df[-40:]
-    buy = recent[recent['SIGNAL'] == 1]['Close']
-    sell = recent[recent['SIGNAL'] == 2]['Close']
-    recent['Close'].plot(figsize=(10, 4), title="Buy/Sell Prediction")
-    plt.scatter(buy.index, buy.values, color='red', marker='^', label='Buy')
-    plt.scatter(sell.index, sell.values, color='black', label='Sell')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("./static/predict_result.png")
-    plt.close()
+    buy = recent[recent['SIGNAL'] == 1]
+    sell = recent[recent['SIGNAL'] == 2]
+
+    fig = go.Figure()
+
+    # 收盤價線：黑色線條
+    fig.add_trace(go.Scatter(
+        x=recent.index,
+        y=recent['Close'],
+        mode='lines+markers',
+        name='Close Price',
+        line=dict(color='black')
+    ))
+
+    # 買進訊號：綠色正三角
+    fig.add_trace(go.Scatter(
+        x=buy.index,
+        y=buy['Close'],
+        mode='markers',
+        name='Buy Signal',
+        marker=dict(color='green', size=10, symbol='triangle-up')
+    ))
+
+    # 賣出訊號：紅色倒三角
+    fig.add_trace(go.Scatter(
+        x=sell.index,
+        y=sell['Close'],
+        mode='markers',
+        name='Sell Signal',
+        marker=dict(color='red', size=10, symbol='triangle-down')
+    ))
+
+    fig.update_layout(
+        title="Buy/Sell Prediction (Interactive)",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=True,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(color='black'),
+        legend=dict(
+            bgcolor='white',
+            bordercolor='lightgray',
+            borderwidth=1
+        )
+    )
+
+    fig.write_html("./static/predict_result.html", include_plotlyjs='cdn')
 
 # === 主邏輯 ===
 def create_result():
@@ -97,3 +139,4 @@ def render_page():
 # === 執行 ===
 if __name__ == '__main__':
     app.run(debug=False, port=int(os.getenv('PORT', 5015)))
+# 我想要讓網頁上的股價走勢圖可以放大特定區間
