@@ -7,7 +7,8 @@ from keras.layers import Input, Dense
 import matplotlib.pyplot as plt
 from keras.models import load_model
 import pandas as pd
-import pandas_datareader.data as web
+import yfinance as yf
+from datetime import datetime, timedelta
 from finta import TA
 from sklearn.preprocessing import MinMaxScaler
 import joblib
@@ -17,8 +18,8 @@ from keras import backend as K
 #定義函數create_result()====================================
 def create_result():
 	#定義路徑
-	model_path = './CNN_stock_model/Ricky_net_v12.h5'
-	scaler_path = './CNN_stock_model/MinMax_scaler_v12.pkl'
+	model_path = './CNN_stock_model/model.h5'
+	scaler_path = './CNN_stock_model/scaler.pkl'
 	SID = '^TWII'
 	#製作agent
 	model = load_model(model_path)
@@ -30,7 +31,7 @@ def create_result():
 			return predict
 	Ricky = Agent(model)
 	#製作features
-	df = web.DataReader(SID,'yahoo',start="2018-01-01")
+	df = yf.download(SID,start="2018-01-01")
 	df = df.iloc[:,:5]
 	ohlcv = df[['Open','High','Low','Close','Volume']]
 	ohlcv.columns = ['open','high','low','close','volume']
@@ -55,9 +56,9 @@ def create_result():
 	df['triple_barrier_signal'] = 0
 	#features scaling
 	min_max_scaler = joblib.load(scaler_path)
-	df_minmax = min_max_scaler.transform(df)
-	df_minmax = pd.DataFrame(df_minmax,index = df.index,columns = df.columns)
-	df = df_minmax.drop('triple_barrier_signal',axis=1)
+	df_minmax = min_max_scaler.transform(df[features])
+	df_minmax = pd.DataFrame(df_minmax,index = df.index,columns = features)
+	#df = df_minmax.drop('triple_barrier_signal',axis=1)
 	#Xs prepare
 	days = 15
 	b_index = 0
@@ -70,6 +71,7 @@ def create_result():
 	Xs = np.array(Xs)
 	#Reshape X
 	Xs = Xs.reshape(-1,days,len(features),1)
+	print(Xs.shape)
 	#model predict
 	predict = Ricky.choose_action(Xs)
 	SIGNAL = [ np.argmax(i) for i in predict]
@@ -79,7 +81,7 @@ def create_result():
 	df['BUY'] = predict[:,1]
 	df['SELL'] = predict[:,2]
 	df = df.iloc[:,-3:]
-	df['Close'] = web.DataReader(SID,'yahoo',start="2018-01-01")['Close'][-len(SIGNAL):].values
+	df['Close'] = yf.download(SID,start="2018-01-01")['Close'][-len(SIGNAL):].values
 	df['SIGNAL'] = SIGNAL
 	#繪圖
 	t = df[-40:].copy()
@@ -107,3 +109,6 @@ def render_page():
 
 if __name__ == '__main__':
 	app.run(debug=False,port=os.getenv('PORT',5015))
+
+# 我想重構代碼讓代碼更簡潔高效
+# 寫一個cnn-stock-web.html可以展示數據和圖表
