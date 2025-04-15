@@ -1,114 +1,99 @@
-from flask import Flask,render_template
+from flask import Flask, render_template
 import os
 import numpy as np
-import io
-from keras.models import Model
-from keras.layers import Input, Dense
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from keras.models import load_model
-import pandas as pd
-import yfinance as yf
-from datetime import datetime, timedelta
+import pandas_datareader.data as web
 from finta import TA
 from sklearn.preprocessing import MinMaxScaler
 import joblib
-import numpy as np
+import pandas as pd
 from keras import backend as K
+import yfinance as yf
 
-#定義函數create_result()====================================
-def create_result():
-	#定義路徑
-	model_path = './CNN_stock_model/model.h5'
-	scaler_path = './CNN_stock_model/scaler.pkl'
-	SID = '^TWII'
-	#製作agent
-	model = load_model(model_path)
-	class Agent:
-		def __init__(self,model):
-			self.model = model
-		def choose_action(self,features):
-			predict = self.model.predict(features)
-			return predict
-	Ricky = Agent(model)
-	#製作features
-	df = yf.download(SID,start="2018-01-01")
-	df = df.iloc[:,:5]
-	ohlcv = df[['Open','High','Low','Close','Volume']]
-	ohlcv.columns = ['open','high','low','close','volume']
-	df['RSI'] = TA.RSI(ohlcv)
-	df['Williams %R'] = TA.WILLIAMS(ohlcv)
-	df['SMA'] = TA.SMA(ohlcv)
-	df['EMA'] = TA.EMA(ohlcv)
-	df['WMA'] = TA.WMA(ohlcv)
-	df['HMA'] = TA.HMA(ohlcv)
-	df['TEMA'] = TA.TEMA(ohlcv)
-	df['CCI'] = TA.CCI(ohlcv)
-	df['CMO'] = TA.CMO(ohlcv)
-	df['MACD'] = TA.MACD(ohlcv)['MACD'] - TA.MACD(ohlcv)['SIGNAL']
-	df['PPO'] = TA.PPO(ohlcv)['PPO'] - TA.PPO(ohlcv)['SIGNAL']
-	df['ROC'] = TA.ROC(ohlcv)
-	df['CFI'] = TA.CFI(ohlcv)
-	df['DMI'] = TA.DMI(ohlcv)['DI+'] - TA.DMI(ohlcv)['DI-']
-	df['SAR'] = TA.SAR(ohlcv)
-	df = df.dropna(axis=0)
-	features = df.columns[-15:].tolist()
-	df = df[features]
-	df['triple_barrier_signal'] = 0
-	#features scaling
-	min_max_scaler = joblib.load(scaler_path)
-	df_minmax = min_max_scaler.transform(df[features])
-	df_minmax = pd.DataFrame(df_minmax,index = df.index,columns = features)
-	#df = df_minmax.drop('triple_barrier_signal',axis=1)
-	#Xs prepare
-	days = 15
-	b_index = 0
-	f_index = len(df)-days
-	Xs = []
-	for i in range(b_index ,f_index+1 ,1):
-	  X = df.iloc[i:i+days,:][features]
-	  X = np.array(X)
-	  Xs.append(X)
-	Xs = np.array(Xs)
-	#Reshape X
-	Xs = Xs.reshape(-1,days,len(features),1)
-	print(Xs.shape)
-	#model predict
-	predict = Ricky.choose_action(Xs)
-	SIGNAL = [ np.argmax(i) for i in predict]
-	#predict result
-	df = df.iloc[-len(SIGNAL):]
-	df['HOLD'] = predict[:,0]
-	df['BUY'] = predict[:,1]
-	df['SELL'] = predict[:,2]
-	df = df.iloc[:,-3:]
-	df['Close'] = yf.download(SID,start="2018-01-01")['Close'][-len(SIGNAL):].values
-	df['SIGNAL'] = SIGNAL
-	#繪圖
-	t = df[-40:].copy()
-	print(t)
-	buy = t[t['SIGNAL']==1]['Close']
-	sell = t[t['SIGNAL']==2]['Close']
-	t['Close'].plot()
-	plt.scatter(list(buy.index),list(buy.values),color='red',marker='^')
-	plt.scatter(list(sell.index),list(sell.values),color='black')
-	plt.savefig("./static/predict_result.png")
-	return t
-#=======================================================================
-
+# === 初始化 Flask App ===
 app = Flask(__name__, static_url_path='/static')
 
+# === 定義常數與路徑 ===
+MODEL_PATH = './CNN_stock_model/model.h5'
+SCALER_PATH = './CNN_stock_model/scaler.pkl'
+SID = '^TWII'
+DAYS = 15
+FEATURES = [
+    'RSI', 'Williams %R', 'SMA', 'EMA', 'WMA', 'HMA',
+    'TEMA', 'CCI', 'CMO', 'MACD', 'PPO', 'ROC', 'CFI', 'DMI', 'SAR'
+]
+
+# === 資料處理 ===
+def load_stock_data():
+    df = yf.download(SID,start='2018-01-01')
+    ohlcv = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+    ohlcv.columns = ['open', 'high', 'low', 'close', 'volume']
+    df['RSI'] = TA.RSI(ohlcv)
+    df['Williams %R'] = TA.WILLIAMS(ohlcv)
+    df['SMA'] = TA.SMA(ohlcv)
+    df['EMA'] = TA.EMA(ohlcv)
+    df['WMA'] = TA.WMA(ohlcv)
+    df['HMA'] = TA.HMA(ohlcv)
+    df['TEMA'] = TA.TEMA(ohlcv)
+    df['CCI'] = TA.CCI(ohlcv)
+    df['CMO'] = TA.CMO(ohlcv)
+    df['MACD'] = TA.MACD(ohlcv)['MACD'] - TA.MACD(ohlcv)['SIGNAL']
+    df['PPO'] = TA.PPO(ohlcv)['PPO'] - TA.PPO(ohlcv)['SIGNAL']
+    df['ROC'] = TA.ROC(ohlcv)
+    df['CFI'] = TA.CFI(ohlcv)
+    df['DMI'] = TA.DMI(ohlcv)['DI+'] - TA.DMI(ohlcv)['DI-']
+    df['SAR'] = TA.SAR(ohlcv)
+    return df.dropna()
+
+def prepare_features(df):
+    scaler = joblib.load(SCALER_PATH)
+    df_scaled = pd.DataFrame(scaler.transform(df[FEATURES]), columns=FEATURES, index=df.index)
+    Xs = np.array([df_scaled.iloc[i:i+DAYS].values for i in range(len(df_scaled) - DAYS + 1)])
+    return Xs.reshape(-1, DAYS, len(FEATURES), 1)
+
+# === 預測與圖形繪製 ===
+def predict_signals(Xs, close_prices):
+    model = load_model(MODEL_PATH)
+    preds = model.predict(Xs)
+    signal = [np.argmax(p) for p in preds]
+    result_df = pd.DataFrame(preds, columns=['HOLD', 'BUY', 'SELL'])
+    result_df['Close'] = close_prices[-len(preds):].values
+    result_df['SIGNAL'] = signal
+    result_df.index = close_prices[-len(preds):].index
+    return result_df
+
+def plot_prediction(df):
+    recent = df[-40:]
+    buy = recent[recent['SIGNAL'] == 1]['Close']
+    sell = recent[recent['SIGNAL'] == 2]['Close']
+    recent['Close'].plot(figsize=(10, 4), title="Buy/Sell Prediction")
+    plt.scatter(buy.index, buy.values, color='red', marker='^', label='Buy')
+    plt.scatter(sell.index, sell.values, color='black', label='Sell')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("./static/predict_result.png")
+    plt.close()
+
+# === 主邏輯 ===
+def create_result():
+    df = load_stock_data()
+    Xs = prepare_features(df)
+    result_df = predict_signals(Xs, df['Close'])
+    plot_prediction(result_df)
+    return result_df
+
+# === Flask route ===
 @app.route('/')
 def render_page():
-	K.clear_session()
-	table = create_result()
-	K.clear_session()
-	table['date'] = table.index
-	data = table.values
-	print(data.shape)
-	return render_template('cnn-stock-web.html',data=data)
+    K.clear_session()
+    result = create_result()
+    K.clear_session()
+    result['date'] = result.index.strftime('%Y-%m-%d')
+    return render_template('cnn-stock-web.html', data=result.tail(40).values)
 
+# === 執行 ===
 if __name__ == '__main__':
-	app.run(debug=False,port=os.getenv('PORT',5015))
-
-# 我想重構代碼讓代碼更簡潔高效
-# 寫一個cnn-stock-web.html可以展示數據和圖表
+    app.run(debug=False, port=int(os.getenv('PORT', 5015)))
