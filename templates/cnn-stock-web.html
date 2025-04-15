@@ -1,31 +1,98 @@
-<html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>CNN 股票預測</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .predict_result {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .predict_result img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #e8e8e8;
+        }
+        .refresh-button {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .refresh-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 CNN 股票預測系統</h1>
 
-    <head>
-        <meta charset="utf-8"/>
-        <title>CNN Stock predict</title>
-    </head>
+        <form method="get" action="/">
+            <button type="submit" class="refresh-button">🔄 更新預測</button>
+        </form>
 
-    <body>      
-        <div class ="predict_result">
-            <img src="{{ url_for('static', filename='predict_result.png') }}"/>
+        <div class="predict_result">
+            <img src="{{ url_for('static', filename='predict_result.png') }}" alt="預測圖表">
         </div>
-        <h8>近期買賣機率參考</h8>    
-        <table border="2">
-        	    
-        	    <tr>
-        	    	<td>DATE</td>
-        	    	<td>HOLD</td>
-        	    	<td>BUY</td>
-        	    	<td>SELL</td>
-        	    </tr>
-        	    {% for row in data %}
-        	    <tr>
-        	        <td>{{row[5]}}</td>
-        	 		<td>{{row[0]}}</td>
-        	 		<td>{{row[1]}}</td>
-        	 		<td>{{row[2]}}</td>
-        	    </tr>
-        	    {% endfor %}
-        </table> 
-    </body>
+
+        <h2>📊 近期買賣信號機率</h2>
+        <table>
+            <tr>
+                <th>日期</th>
+                <th>HOLD</th>
+                <th>BUY</th>
+                <th>SELL</th>
+            </tr>
+            {% for row in data %}
+            <tr>
+                <td>{{ row[5] }}</td>
+                <td>{{ row[0] | round(3) }}</td>
+                <td>{{ row[1] | round(3) }}</td>
+                <td>{{ row[2] | round(3) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
 </html>
